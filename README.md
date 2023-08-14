@@ -4,6 +4,8 @@ This is a sample project that shows how to build and deploy a AWS Lambda functio
 
 The aim is to illustrate some of the more advanced features of the SAM CLI like building and deploying multiple Go based lambda functions from a single module.
 
+This is a follow up from my blog post https://www.wolfe.id.au/2023/08/09/rip-aws-go-lambda-runtime/ where I discussed how AWS is deprecating the Go Lambda Runtime in favor of the generic `provided.al2` runtime.
+
 # Outline
 
 Some things to note about this project:
