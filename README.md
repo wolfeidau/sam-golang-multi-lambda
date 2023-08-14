@@ -11,8 +11,10 @@ This is a follow up from my blog post https://www.wolfe.id.au/2023/08/09/rip-aws
 Some things to note about this project:
 
 1. The project is a single Go module that contains multiple Lambda function binaries, shared code can be stored in `/pkg` or `/internal` and imported by any of the functions.
-2. The `Makefile` contains custom build flags to ensure a version is provided to each, as well as `ldflags` and the flag to remove the RPC endpoint from the binaries.
-3. There is a `template.yaml` that defines the AWS Serverless Application Model (SAM) resources for each function individually.
+2. The [Makefile](Makefile) contains custom build flags to ensure a version is provided to each, as well as `ldflags` and the flag to remove the RPC endpoint from the binaries.
+3. There is a [template.yaml](template.yaml) that defines the AWS Serverless Application Model (SAM) resources for each function individually.
+
+++Note:++ I have used the `AWS::Serverless::Function` resource `Metadata` to specify the function binary to ensure each is built and packaged separately.
 
 The layout of the project is as follows:
 
@@ -38,7 +40,6 @@ The layout of the project is as follows:
 ## Requirements
 
 * AWS CLI already configured with Administrator permission
-* [Docker installed](https://www.docker.com/community-edition)
 * [Golang](https://golang.org)
 * SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 
