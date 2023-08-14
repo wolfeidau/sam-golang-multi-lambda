@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-golang-multi-lambda
+  
+  Sample SAM Template for sam-golang-multi-lambda
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+    MemorySize: 128
+
+Resources:
+  APIFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata:
+      BuildProperties:
+        Binary: api-lambda # used to ensure separate binaries are built for each function
+    Properties:
+      CodeUri: ./
+      Handler: api-lambda # unused but nice to keep similar to old format
+      Runtime: provided.al2
+      Architectures:
+        - arm64
+      Events:
+        CatchAll:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: GET
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          PARAM1: VALUE
+
+  ScheduledFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Metadata:
+      BuildProperties:
+        Binary: scheduled-lambda # used to ensure separate binaries are built for each function
+    Properties:
+      CodeUri: ./
+      Handler: scheduled-lambda # unused but nice to keep similar to old format
+      Runtime: provided.al2
+      Architectures:
+        - arm64
+      Events:
+        CWSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: 'rate(1 hour)'
+            Name: TestSchedule
+            Description: test schedule
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  API:
+    Description: "API Gateway endpoint URL for Prod environment for First Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  APIFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt APIFunction.Arn
+  APIFunctionIamRole:
+    Description: "Implicit IAM Role created for first function"
+    Value: !GetAtt APIFunctionRole.Arn
+  ScheduledFunction:
+    Description: "Second Lambda Function ARN"
+    Value: !GetAtt ScheduledFunction.Arn
+  ScheduledFunctionIamRole:
+    Description: "Implicit IAM Role created for second function"
+    Value: !GetAtt ScheduledFunctionRole.Arn
