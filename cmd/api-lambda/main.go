@@ -7,6 +7,10 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
+var (
+	commit = "dev"
+)
+
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var greeting string
 	sourceIP := request.RequestContext.Identity.SourceIP
@@ -24,5 +28,6 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func main() {
+	fmt.Printf("version=%s\n", commit)
 	lambda.Start(handler)
 }

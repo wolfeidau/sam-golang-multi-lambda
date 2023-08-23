@@ -14,7 +14,7 @@ Some things to note about this project:
 2. The [Makefile](Makefile) contains custom build flags to ensure a version is provided to each, as well as `ldflags` and the flag to remove the RPC endpoint from the binaries.
 3. There is a [template.yaml](template.yaml) that defines the AWS Serverless Application Model (SAM) resources for each function individually.
 
-++Note:++ I have used the `AWS::Serverless::Function` resource `Metadata` to specify the function binary to ensure each is built and packaged separately.
+++Note:++ I have used the `AWS::Serverless::Function` resource `Metadata` to specify the function `BuildMethod` as `go1.x` to ensure each is built and packaged separately. This is mentioned in the migration blog post titled [Migrating AWS Lambda functions from the Go1.x runtime to the custom runtime on Amazon Linux 2](https://aws.amazon.com/blogs/compute/migrating-aws-lambda-functions-from-the-go1-x-runtime-to-the-custom-runtime-on-amazon-linux-2/).
 
 The layout of the project is as follows:
 
