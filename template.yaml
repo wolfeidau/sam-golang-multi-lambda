@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   sam-golang-multi-lambda
   
-  Sample SAM Template for sam-golang-multi-lambda
+  SAM Template which deploys multiple SAM Go based lambda functions
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
@@ -15,11 +15,10 @@ Resources:
   APIFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Metadata:
-      BuildProperties:
-        Binary: api-lambda # used to ensure separate binaries are built for each function
+      BuildMethod: "go1.x"
     Properties:
-      CodeUri: ./
-      Handler: api-lambda # unused but nice to keep similar to old format
+      CodeUri: ./cmd/api-lambda
+      Handler: bootstrap # used to rename the binary
       Runtime: provided.al2
       Architectures:
         - arm64
@@ -36,11 +35,10 @@ Resources:
   ScheduledFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Metadata:
-      BuildProperties:
-        Binary: scheduled-lambda # used to ensure separate binaries are built for each function
+      BuildMethod: "go1.x"
     Properties:
-      CodeUri: ./
-      Handler: scheduled-lambda # unused but nice to keep similar to old format
+      CodeUri: ./cmd/scheduled-lambda
+      Handler: bootstrap # used to rename the binary
       Runtime: provided.al2
       Architectures:
         - arm64
