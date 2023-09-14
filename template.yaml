@@ -2,16 +2,72 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   sam-golang-multi-lambda
-  
+
   SAM Template which deploys multiple SAM Go based lambda functions
+
+Parameters:
+  Stage:
+    Type: String
+    Default: Dev
+    AllowedValues:
+      - Dev
+      - Prod
+      - Local
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - ES6000 # SQS Queue ScheduledDLQ should have a RedrivePolicy property configured.
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 5
     MemorySize: 128
+    Tracing: Active
 
 Resources:
+  ApiAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/AccessLog-${ApiService}
+      RetentionInDays: 14
+
+  ApiService:
+    Type: AWS::Serverless::Api
+    Properties:
+      EndpointConfiguration:
+        Type: REGIONAL
+      StageName: !Ref Stage
+      TracingEnabled: true # Enable AWS X-Ray to help debug API requests
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          # Disable data trace in production to avoid logging customer sensitive information from requests and responses
+          DataTraceEnabled: true
+          LoggingLevel: INFO
+          MetricsEnabled: true
+          ThrottlingRateLimit: 5
+          ThrottlingBurstLimit: 10
+      AccessLogSetting:
+        DestinationArn: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ApiAccessLogGroup}"
+        Format: >
+          {"requestId":"$context.requestId",
+          "integration-error":"$context.integration.error",
+          "integration-status":"$context.integration.status",
+          "integration-latency":"$context.integration.latency",
+          "integration-requestId":"$context.integration.requestId",
+          "integration-integrationStatus":"$context.integration.integrationStatus",
+          "response-latency":"$context.responseLatency",
+          "status":"$context.status"}
+      OpenApiVersion: "3.0.0"
+
+  APIFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${APIFunction}"
+      RetentionInDays: 14
   APIFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Metadata:
@@ -26,11 +82,32 @@ Resources:
         CatchAll:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
+            RestApiId: !Ref ApiService
             Path: /hello
             Method: GET
       Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
         Variables:
           PARAM1: VALUE
+
+  # SQS Dead Letter Queue for retrying failed events
+  ScheduledDLQ:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 86400 # Maximum value, 1,209,600 seconds (14days)
+
+  # SQS Dead Letter Queue for service events
+  ServiceDLQ:
+    Type: "AWS::SQS::Queue"
+    Properties:
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 86400 # Maximum value, 1,209,600 seconds (14days)
+
+  ScheduledFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ScheduledFunction}"
+      RetentionInDays: 14
 
   ScheduledFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -42,6 +119,11 @@ Resources:
       Runtime: provided.al2
       Architectures:
         - arm64
+      EventInvokeConfig:
+        DestinationConfig:
+          OnFailure:
+            Type: SQS
+            Destination: !GetAtt ServiceDLQ.Arn
       Events:
         CWSchedule:
           Type: Schedule
@@ -49,6 +131,12 @@ Resources:
             Schedule: 'rate(1 hour)'
             Name: TestSchedule
             Description: test schedule
+            DeadLetterConfig:
+              Arn: !GetAtt ScheduledDLQ.Arn
+            RetryPolicy:
+              MaximumRetryAttempts: 5
+              MaximumEventAgeInSeconds: 900
+
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
@@ -56,7 +144,7 @@ Outputs:
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   API:
     Description: "API Gateway endpoint URL for Prod environment for First Function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+    Value: !Sub "https://${ApiService}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   APIFunction:
     Description: "First Lambda Function ARN"
     Value: !GetAtt APIFunction.Arn

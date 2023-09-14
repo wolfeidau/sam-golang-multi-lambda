@@ -16,6 +16,10 @@ build:
 	@echo "GOFLAGS=$(GOFLAGS)"
 	@sam build
 
+.PHONY: cfn-lint
+cfn-lint:
+	docker run -it -v $(shell pwd):/src -w /src ghcr.io/stax-labs/cfn-lint-docker-image:latest template.yaml -a cfn_lint_serverless.rules
+
 .PHONY: clean
 clean:
 	rm -rf .aws-sam
